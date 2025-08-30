@@ -1,0 +1,22 @@
+FROM debian:10.13
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY ./src/ /src/
+
+# 使用Debian官方存档源
+RUN echo "deb http://archive.debian.org/debian/ buster main" > /etc/apt/sources.list \
+    && echo "deb http://archive.debian.org/debian-security buster/updates main" >> /etc/apt/sources.list
+
+RUN apt update --no-install-recommends \
+    && apt install -y gcc dwarfdump build-essential unzip linux-kbuild-4.19 linux-compiler-gcc-8-x86
+
+WORKDIR /src
+RUN unzip tools.zip \
+    && dpkg -i linux-headers-4.19.0-21-common_4.19.249-2_all.deb \
+    && dpkg -i linux-headers-4.19.0-21-amd64_4.19.249-2_amd64.deb
+
+WORKDIR /src/tools/linux
+RUN echo 'MODULE_LICENSE("GPL");' >> module.c && \
+    sed -i 's/$(shell uname -r)/4.19.0-21-amd64/g' Makefile && \
+    make && \
+    mv module.dwarf /tmp
